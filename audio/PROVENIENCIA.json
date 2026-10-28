@@ -1,0 +1,37 @@
+{
+  "authoring": "Original deterministic mathematical synthesis; no sampled or downloaded audio",
+  "sample_rate": 44100,
+  "format": "mono PCM16",
+  "files": {
+    "shot.wav": {
+      "seconds": 0.16,
+      "peak_pcm16": 7209,
+      "level": 0.22
+    },
+    "impact.wav": {
+      "seconds": 0.2,
+      "peak_pcm16": 5898,
+      "level": 0.18
+    },
+    "transfer.wav": {
+      "seconds": 0.65,
+      "peak_pcm16": 6553,
+      "level": 0.2
+    },
+    "ui.wav": {
+      "seconds": 0.075,
+      "peak_pcm16": 4587,
+      "level": 0.14
+    },
+    "victory.wav": {
+      "seconds": 1.15,
+      "peak_pcm16": 8192,
+      "level": 0.25
+    },
+    "defeat.wav": {
+      "seconds": 1.05,
+      "peak_pcm16": 7536,
+      "level": 0.23
+    }
+  }
+}

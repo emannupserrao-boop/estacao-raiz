@@ -1,0 +1,73 @@
+{
+  "authoring": "Original FM and additive synthesis with deterministic noise; no film/game recordings or downloaded samples",
+  "sample_rate": 44100,
+  "format": "mono PCM16",
+  "variants": [
+    {
+      "file": "blaster_a_0.wav",
+      "defense": "A",
+      "variant": 0,
+      "seconds": 0.205,
+      "start_hz": 2062.2,
+      "end_hz": 280,
+      "sweep_seconds": 0.021,
+      "peak_pcm16": 7209,
+      "sha256": "073ad329a0a21b1508c1d8072a875b6473fe214e67467ec8d2f32eaee9713710"
+    },
+    {
+      "file": "blaster_a_1.wav",
+      "defense": "A",
+      "variant": 1,
+      "seconds": 0.205,
+      "start_hz": 2100.0,
+      "end_hz": 280,
+      "sweep_seconds": 0.021,
+      "peak_pcm16": 7209,
+      "sha256": "539616cca7ce5c99aedf1d700cf8e8d391afa50c7621386980c36d65c29f8b3b"
+    },
+    {
+      "file": "blaster_a_2.wav",
+      "defense": "A",
+      "variant": 2,
+      "seconds": 0.205,
+      "start_hz": 2137.8,
+      "end_hz": 280,
+      "sweep_seconds": 0.021,
+      "peak_pcm16": 7209,
+      "sha256": "e5bd6e5d81bace5488bceed3a2a6c35b6fffb0a3fbb9b50852137673b2ac9fee"
+    },
+    {
+      "file": "blaster_b_0.wav",
+      "defense": "B",
+      "variant": 0,
+      "seconds": 0.255,
+      "start_hz": 1423.8999999999999,
+      "end_hz": 165,
+      "sweep_seconds": 0.029,
+      "peak_pcm16": 7209,
+      "sha256": "7d831c938baa70088b6b86769676948245935a1cf631b82bbe2aacfa4bfa174c"
+    },
+    {
+      "file": "blaster_b_1.wav",
+      "defense": "B",
+      "variant": 1,
+      "seconds": 0.255,
+      "start_hz": 1450.0,
+      "end_hz": 165,
+      "sweep_seconds": 0.029,
+      "peak_pcm16": 7209,
+      "sha256": "3990e129cc8cc620abcab767030cf360aecab1401136e3e6e89b4db89fb161ca"
+    },
+    {
+      "file": "blaster_b_2.wav",
+      "defense": "B",
+      "variant": 2,
+      "seconds": 0.255,
+      "start_hz": 1476.1000000000001,
+      "end_hz": 165,
+      "sweep_seconds": 0.029,
+      "peak_pcm16": 7209,
+      "sha256": "06aaf6c2b66cae8639e5ca040fe7e2696236b0d5fa717cc016720237b3fc8e98"
+    }
+  ]
+}

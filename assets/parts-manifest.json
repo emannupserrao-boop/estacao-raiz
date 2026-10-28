@@ -1,0 +1,402 @@
+[
+  {
+    "name": "seed_base",
+    "source_rect": [
+      0,
+      0,
+      384,
+      256
+    ],
+    "alpha_bbox": [
+      81,
+      15,
+      325,
+      246
+    ],
+    "anchor": [
+      128,
+      234
+    ],
+    "scale": 0.9016393442622951,
+    "size": [
+      220,
+      208
+    ],
+    "sha256": "6aca5ae165b77a0a057ee5f4674542008a3ed56e1b872be568784243fb4b1a8a"
+  },
+  {
+    "name": "seed_head",
+    "source_rect": [
+      384,
+      0,
+      768,
+      256
+    ],
+    "alpha_bbox": [
+      51,
+      20,
+      349,
+      200
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.738255033557047,
+    "size": [
+      220,
+      133
+    ],
+    "sha256": "312a642ab6fb70b7aabeb051308dd9c80bb41bdb8d6ecd4ccd0fc3207b1f67a3"
+  },
+  {
+    "name": "flower_base",
+    "source_rect": [
+      768,
+      0,
+      1152,
+      256
+    ],
+    "alpha_bbox": [
+      57,
+      50,
+      318,
+      246
+    ],
+    "anchor": [
+      128,
+      234
+    ],
+    "scale": 0.842911877394636,
+    "size": [
+      220,
+      165
+    ],
+    "sha256": "dbc3bc680550cdd72b6c386d91ec3212c7d24a442f8b9a7b67561e2b84522021"
+  },
+  {
+    "name": "flower_head",
+    "source_rect": [
+      1152,
+      0,
+      1536,
+      256
+    ],
+    "alpha_bbox": [
+      45,
+      8,
+      366,
+      248
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.6853582554517134,
+    "size": [
+      220,
+      164
+    ],
+    "sha256": "a3fde4612d4b945c18dfb712dab7c5bdf0287d2a8dbe86a01233686c13b3334c"
+  },
+  {
+    "name": "runner_body",
+    "source_rect": [
+      0,
+      256,
+      420,
+      512
+    ],
+    "alpha_bbox": [
+      12,
+      42,
+      400,
+      196
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.5670103092783505,
+    "size": [
+      220,
+      87
+    ],
+    "sha256": "6a29a8a1ca2bb623d05b284200bd5e7c45296f03aaed10b03dbac8b178654d71"
+  },
+  {
+    "name": "runner_leg_l",
+    "source_rect": [
+      420,
+      256,
+      768,
+      512
+    ],
+    "alpha_bbox": [
+      122,
+      7,
+      230,
+      242
+    ],
+    "anchor": [
+      128,
+      20
+    ],
+    "scale": 0.8936170212765957,
+    "size": [
+      97,
+      210
+    ],
+    "sha256": "29c5c9dbe2238b91f727ca0529a63190dab9140748a8c60fe79f565991eae614"
+  },
+  {
+    "name": "runner_leg_r",
+    "source_rect": [
+      768,
+      256,
+      1152,
+      512
+    ],
+    "alpha_bbox": [
+      104,
+      7,
+      213,
+      242
+    ],
+    "anchor": [
+      128,
+      20
+    ],
+    "scale": 0.8936170212765957,
+    "size": [
+      97,
+      210
+    ],
+    "sha256": "ab59b9a95d73b998ba79039a3144f72c4b0a913daa7dabd4a941e09e05aa39e1"
+  },
+  {
+    "name": "armor_body",
+    "source_rect": [
+      1152,
+      256,
+      1536,
+      512
+    ],
+    "alpha_bbox": [
+      17,
+      12,
+      361,
+      237
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.6395348837209303,
+    "size": [
+      220,
+      144
+    ],
+    "sha256": "a9f82ea6f9e1a34b4a4ac6f7cebb5f3f98af2b4ff3fa08825cab22f67abae3de"
+  },
+  {
+    "name": "armor_leg_l",
+    "source_rect": [
+      0,
+      512,
+      384,
+      768
+    ],
+    "alpha_bbox": [
+      92,
+      2,
+      271,
+      232
+    ],
+    "anchor": [
+      128,
+      20
+    ],
+    "scale": 0.9130434782608695,
+    "size": [
+      163,
+      210
+    ],
+    "sha256": "d350c6685e007a9247c1fe8cc3152159dd8b0f36ccf811d5c76fd903d580e9cb"
+  },
+  {
+    "name": "armor_leg_r",
+    "source_rect": [
+      384,
+      512,
+      768,
+      768
+    ],
+    "alpha_bbox": [
+      80,
+      3,
+      292,
+      256
+    ],
+    "anchor": [
+      128,
+      20
+    ],
+    "scale": 0.8300395256916996,
+    "size": [
+      176,
+      210
+    ],
+    "sha256": "2e868a2116bccf6fe2d634df57c863f6e16b56998e8156c25e460c20f1651b58"
+  },
+  {
+    "name": "heart_base",
+    "source_rect": [
+      768,
+      512,
+      1152,
+      768
+    ],
+    "alpha_bbox": [
+      22,
+      2,
+      336,
+      256
+    ],
+    "anchor": [
+      128,
+      234
+    ],
+    "scale": 0.7006369426751592,
+    "size": [
+      220,
+      178
+    ],
+    "sha256": "aa1f8147ffa5d7655295f414d24d4eeabc4e8e1a066afb76ee35258a7e1f5c79"
+  },
+  {
+    "name": "heart_core",
+    "source_rect": [
+      1152,
+      512,
+      1536,
+      768
+    ],
+    "alpha_bbox": [
+      95,
+      2,
+      306,
+      256
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.8267716535433071,
+    "size": [
+      174,
+      210
+    ],
+    "sha256": "77488dc2092e3dc41ed4670f23fccf1391e5be3764e95fdca05197f897dc18de"
+  },
+  {
+    "name": "petal",
+    "source_rect": [
+      0,
+      768,
+      384,
+      1024
+    ],
+    "alpha_bbox": [
+      127,
+      0,
+      384,
+      236
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.8560311284046692,
+    "size": [
+      220,
+      202
+    ],
+    "sha256": "c0e45b2db2ab006dc2ba9d5444170f9c5d9871b1308e9d109e587511a91d9417"
+  },
+  {
+    "name": "restored_plant",
+    "source_rect": [
+      384,
+      768,
+      768,
+      1024
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      371,
+      244
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.5929919137466307,
+    "size": [
+      220,
+      145
+    ],
+    "sha256": "2a0e39f9d527eb252cb8c69e692e1b5775334edc46206e894b60ea1ed333e91d"
+  },
+  {
+    "name": "bud",
+    "source_rect": [
+      768,
+      768,
+      1152,
+      1024
+    ],
+    "alpha_bbox": [
+      82,
+      0,
+      302,
+      242
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.8677685950413223,
+    "size": [
+      191,
+      210
+    ],
+    "sha256": "64877280c77bbe19a885ce7e9a02a00c5768599a3055e412b20d6f51569ca6ff"
+  },
+  {
+    "name": "reserve_module",
+    "source_rect": [
+      1152,
+      768,
+      1536,
+      1024
+    ],
+    "alpha_bbox": [
+      69,
+      0,
+      322,
+      233
+    ],
+    "anchor": [
+      128,
+      128
+    ],
+    "scale": 0.8695652173913043,
+    "size": [
+      220,
+      203
+    ],
+    "sha256": "e9bdfe902f6e451c547c4ce976b96a0567f4fd55c8a0ac5581f12fc682500d40"
+  }
+]

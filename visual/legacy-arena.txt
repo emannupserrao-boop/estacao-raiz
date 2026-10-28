@@ -1,0 +1,483 @@
+extends Control
+const Rules = preload("res://defense.gd")
+const CYAN = Color("65ecda")
+const GOLD = Color("f5ca7e")
+const INK = Color("08151e")
+const WHITE = Color("e5f0eb")
+const MUTED = Color("8faab3")
+var game = Rules.new()
+var paused := false
+var confirm_reset := false
+var save_path := "res://local/save.json"
+var buttons: Dictionary = {}
+var status: Label
+var caption: Label
+var failure := ""
+var font: Font
+var heading: Font
+var clock := 0.0
+var reset_timer := 0.0
+var banner_timer := 0.0
+var hit_flash := 0.0
+var last_health := 10
+var show_help := false
+var help_was_paused := false
+var turret_angles := [2.6,2.6]
+
+func _ready() -> void:
+	var sys := SystemFont.new()
+	sys.font_names = PackedStringArray(["Bahnschrift","Segoe UI"])
+	sys.font_weight = 500
+	font = sys
+	var title_font := SystemFont.new()
+	title_font.font_names = PackedStringArray(["Bahnschrift","Segoe UI"])
+	title_font.font_weight = 700
+	heading = title_font
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://local"))
+	if "--qa" not in OS.get_cmdline_user_args(): _load_checkpoint()
+	last_health = game.health
+	_add_button("top","1   REFORÇAR A",Rect2(44,657,133,43),func(): _switch(0),CYAN)
+	_add_button("bottom","2   REFORÇAR B",Rect2(185,657,133,43),func(): _switch(1),CYAN)
+	_add_button("upgrade1","CAPACITOR",Rect2(350,628,245,76),func(): _buy(1),GOLD)
+	_add_button("upgrade2","DIVISOR",Rect2(607,628,245,76),func(): _buy(2),GOLD)
+	_add_button("start","INICIAR ONDA  →",Rect2(886,609,270,44),_start_or_retry,CYAN)
+	_add_button("pause","Pausar",Rect2(886,665,130,37),_toggle_pause,MUTED)
+	_add_button("reset","Novo ciclo",Rect2(1026,665,130,37),_reset,MUTED)
+	_add_button("help","?  Como jogar",Rect2(1045,40,118,30),_toggle_help,MUTED)
+	status = Label.new()
+	status.visible = false
+	add_child(status)
+	caption = Label.new()
+	caption.position = Vector2(44,552)
+	caption.size = Vector2(1110,28)
+	caption.add_theme_font_override("font",font)
+	caption.add_theme_font_size_override("font_size",16)
+	caption.add_theme_color_override("font_color",MUTED)
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(caption)
+	_refresh()
+
+func _toggle_help() -> void:
+	show_help = not show_help
+	if show_help:
+		help_was_paused = paused
+		if game.mode == "wave": paused = true
+	else: paused = help_was_paused
+
+func _style(bg: Color,border: Color,width := 1) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.border_color = border
+	s.set_border_width_all(width)
+	s.set_corner_radius_all(5)
+	s.content_margin_left = 8
+	s.content_margin_right = 8
+	s.content_margin_top = 6
+	s.content_margin_bottom = 6
+	return s
+
+func _add_button(id: String,title: String,rect: Rect2,action: Callable,accent: Color) -> void:
+	var b := Button.new()
+	b.text = title
+	b.position = rect.position
+	b.size = rect.size
+	b.clip_text = true
+	b.add_theme_font_override("font",heading)
+	b.add_theme_font_size_override("font_size",15 if rect.size.y < 60 else 15)
+	b.add_theme_stylebox_override("normal",_style(Color("172e38"),accent.darkened(0.6)))
+	b.add_theme_stylebox_override("hover",_style(Color("23444b"),accent,2))
+	b.add_theme_stylebox_override("pressed",_style(Color("30545a"),accent,2))
+	b.add_theme_stylebox_override("focus",_style(Color(0,0,0,0),WHITE,2))
+	b.add_theme_stylebox_override("disabled",_style(Color("12242d"),Color("29414a")))
+	b.add_theme_color_override("font_color",WHITE)
+	b.add_theme_color_override("font_hover_color",WHITE)
+	b.add_theme_color_override("font_disabled_color",Color("67828b"))
+	b.pressed.connect(action)
+	add_child(b)
+	buttons[id] = b
+
+func _input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo: return
+	if event.keycode not in [KEY_1,KEY_2,KEY_SPACE,KEY_ESCAPE]: return
+	match event.keycode:
+		KEY_1: _switch(0)
+		KEY_2: _switch(1)
+		KEY_SPACE:
+			if show_help: _toggle_help()
+			elif game.mode == "wave": _toggle_pause()
+			else: _start_or_retry()
+		KEY_ESCAPE:
+			if confirm_reset: confirm_reset = false
+			elif show_help: _toggle_help()
+			else: _toggle_pause()
+	get_viewport().set_input_as_handled()
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if Rect2(110,178,900,350).has_point(event.position):
+			_switch(0 if event.position.y < 350 else 1)
+			accept_event()
+
+func _process(dt: float) -> void:
+	clock += dt
+	reset_timer = maxf(0.0,reset_timer-dt)
+	if reset_timer == 0.0: confirm_reset = false
+	banner_timer = maxf(0.0,banner_timer-dt)
+	hit_flash = maxf(0.0,hit_flash-dt*2.0)
+	var before: String = game.mode
+	if not paused: game.tick(minf(dt,0.05))
+	if not paused:
+		for b in game.beams:
+			var muzzle := Vector2(750,215+b.lane*185)
+			var target := Vector2(b.x,280+b.lane*185)
+			turret_angles[b.lane] = lerp_angle(turret_angles[b.lane],(target-muzzle).angle(),minf(1.0,dt*20))
+	if game.health < last_health: hit_flash = 1.0
+	last_health = game.health
+	if before == "wave" and game.mode in ["ready","won"]:
+		_save_checkpoint()
+		banner_timer = 3.5
+	_refresh()
+	queue_redraw()
+
+func _start_or_retry() -> void:
+	confirm_reset = false
+	show_help = false
+	if game.mode == "lost":
+		game = Rules.new()
+		_load_checkpoint()
+		paused = false
+		return
+	if game.mode == "won": return
+	if game.mode == "ready":
+		_save_checkpoint()
+		game.start()
+		paused = false
+		banner_timer = 2.0
+
+func _toggle_pause() -> void:
+	confirm_reset = false
+	if show_help:
+		_toggle_help()
+		return
+	if game.mode == "wave": paused = not paused
+
+func _switch(lane: int) -> void:
+	confirm_reset = false
+	if paused or show_help: return
+	if game.switch_to(lane) and game.mode == "ready": _save_checkpoint()
+
+func _buy(choice: int) -> void:
+	confirm_reset = false
+	if game.buy(choice): _save_checkpoint()
+
+func _reset() -> void:
+	if not confirm_reset:
+		confirm_reset = true
+		reset_timer = 5.0
+		return
+	game = Rules.new()
+	paused = false
+	confirm_reset = false
+	show_help = false
+	last_health = 10
+	_save_checkpoint()
+
+func _save_checkpoint() -> void:
+	var file := FileAccess.open(save_path+".tmp",FileAccess.WRITE)
+	if file == null:
+		failure = "Checkpoint não salvo. Pasta local indisponível."
+		return
+	file.store_string(JSON.stringify(game.checkpoint()))
+	file.close()
+	var err := DirAccess.rename_absolute(save_path+".tmp",save_path)
+	failure = "Falha ao substituir o save." if err != OK else ""
+
+func _load_checkpoint() -> void:
+	if not FileAccess.file_exists(save_path): return
+	var parser := JSON.new()
+	var err := parser.parse(FileAccess.get_file_as_string(save_path))
+	if err != OK or not game.restore(parser.data): failure = "Save inválido: início seguro. Arquivo preservado até próximo checkpoint."
+
+func _refresh() -> void:
+	if status == null: return
+	caption.text = failure if failure != "" else game.message
+	buttons.start.disabled = show_help or game.mode in ["wave","won"]
+	buttons.start.text = "RETOMAR CHECKPOINT  ↻" if game.mode == "lost" else ("CICLO CONCLUÍDO  ✓" if game.mode == "won" else "INICIAR ONDA %d   →" % (game.wave+1))
+	if game.mode == "wave": buttons.start.text = "ONDA EM CURSO"
+	buttons.pause.disabled = game.mode != "wave"
+	buttons.pause.text = "Retomar [Espaço]" if paused else "Pausa [Espaço]"
+	buttons.top.disabled = game.selected == 0 or game.transfer > 0 or paused or show_help or game.mode not in ["ready","wave"]
+	buttons.bottom.disabled = game.selected == 1 or game.transfer > 0 or paused or show_help or game.mode not in ["ready","wave"]
+	for choice in [1,2]:
+		var b: Button = buttons["upgrade%d" % choice]
+		b.disabled = show_help or game.mode != "ready" or (game.upgrade != 0 and game.upgrade != choice) or game.upgrade_level >= 2 or game.credits < 3
+		var title := "CAPACITOR" if choice == 1 else "DIVISOR"
+		var description := "Troca: 0,45s → 0,18s\nDano base na transferência" if choice == 1 else "Reforço: 2 → 3 alvos\nMenos dano por alvo"
+		var tag := "3 CR." if game.upgrade != choice else ("II INSTALADO" if game.upgrade_level == 2 else "I → II / 3 CR.")
+		if game.upgrade != 0 and game.upgrade != choice: tag = "BLOQUEADO"
+		b.add_theme_color_override("font_disabled_color",CYAN if game.upgrade == choice else Color("67828b"))
+		b.text = title + " / " + tag + "\n" + description
+	buttons.reset.text = "Confirmar? %ds" % ceili(reset_timer) if confirm_reset else "Novo ciclo"
+
+func _text(p: Vector2,text: String,size := 16,color := WHITE,bold := false) -> void:
+	draw_string(heading if bold else font,p,text,HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
+
+func _poly(points: Array,color: Color,offset := Vector2.ZERO) -> void:
+	var pts := PackedVector2Array()
+	for p in points: pts.append(p+offset)
+	draw_colored_polygon(pts,color)
+
+func _hex(p: Vector2,r: float,color: Color,rotation := 0.0) -> void:
+	var pts := PackedVector2Array()
+	for i in range(6): pts.append(p+Vector2.from_angle(rotation+TAU*i/6.0)*r)
+	draw_colored_polygon(pts,color)
+
+func _panel(rect: Rect2,bg: Color,border: Color) -> void:
+	draw_style_box(_style(Color(0.01,0.03,0.05,0.65),Color(0,0,0,0)),Rect2(rect.position+Vector2(0,5),rect.size))
+	draw_style_box(_style(bg,border),rect)
+
+func _glow(p: Vector2,r: float,color: Color) -> void:
+	for i in range(4,0,-1): draw_circle(p,r*(1.0+i*0.5),Color(color,0.016*(5-i)))
+	draw_circle(p,r,Color(color,0.15))
+
+func _draw() -> void:
+	if font == null: return
+	_background()
+	_deck()
+	for lane in range(2): _lane(lane)
+	_reactor()
+	for lane in range(2): _turret(lane)
+	for e in game.enemies: _enemy(e)
+	for b in game.beams: _projectile(b)
+	for fx in game.effects: _effect(fx)
+	_hud()
+	if game.mode in ["won","lost"] or paused or show_help: _overlay()
+
+func _background() -> void:
+	draw_rect(Rect2(0,0,1200,760),Color("08121d"))
+	for i in range(85):
+		var p := Vector2(fmod(i*157.3+19,1200),fmod(i*97.7+33,760))
+		draw_circle(p,0.8 if i%3 else 1.3,Color(0.45,0.7,0.75,0.13+0.09*sin(clock*0.3+i)))
+	draw_circle(Vector2(1260,260),290,Color("0c202b"))
+	draw_arc(Vector2(1260,260),294,PI*0.5,PI*1.5,48,Color("193c44"),2,true)
+	for i in range(5): draw_arc(Vector2(-100,580),260+i*12,0,TAU,48,Color(0.1,0.24,0.28,0.12),1,true)
+
+func _deck() -> void:
+	var deck := [Vector2(58,173),Vector2(1010,160),Vector2(1157,218),Vector2(1157,503),Vector2(1100,538),Vector2(70,538),Vector2(42,505),Vector2(42,203)]
+	_poly(deck,Color("040b11"),Vector2(0,28))
+	_poly(deck,Color("14242e"),Vector2(0,15))
+	_poly(deck,Color("263c45"))
+	_poly([Vector2(64,180),Vector2(1005,170),Vector2(1146,224),Vector2(1146,498),Vector2(1094,527),Vector2(76,527),Vector2(53,500),Vector2(53,207)],Color("172c36"))
+	for x in range(90,1100,70):
+		draw_line(Vector2(x,185),Vector2(x,523),Color("213842"),1,true)
+		for y in [190,518]: draw_circle(Vector2(x,y),2,Color("40535a"))
+	for x in range(90,1120,40):
+		_poly([Vector2(x,535),Vector2(x+18,535),Vector2(x+10,546),Vector2(x-8,546)],Color("1b3038"))
+	for y in [201,385,520]:
+		for x in range(110,530,30): draw_line(Vector2(x,y),Vector2(x+12,y),Color("31505a"),2)
+	for lane in range(2):
+		var p := Vector2(750,215+lane*185)
+		var c := CYAN if lane == game.selected and game.transfer <= 0 else Color("345562")
+		if game.transfer > 0: c = GOLD.darkened(0.35)
+		var cable := PackedVector2Array([p,Vector2(960,p.y),Vector2(1000,360),Vector2(1070,360)])
+		draw_polyline(cable,Color("091920"),14,true)
+		draw_polyline(cable,c.darkened(0.4),6,true)
+		draw_polyline(cable,c,2,true)
+		if game.mode in ["ready","wave"]:
+			var t := fmod(clock*0.55+lane*0.4,1.0)
+			draw_circle(p.lerp(Vector2(960,p.y),1.0-t),3,c)
+
+func _lane(lane: int) -> void:
+	var y := 280.0+lane*185.0
+	var c := CYAN if game.selected == lane else Color("70949d")
+	_panel(Rect2(110,y-42,925,84),Color("0c2029"),Color("344c55"))
+	for x in range(130,1030,52):
+		draw_rect(Rect2(x,y-30,47,60),Color("1d343d") if x%104 else Color("1a303a"))
+		draw_line(Vector2(x,y-30),Vector2(x+45,y-30),Color("3a5158"),1)
+		for sy in [-1,1]: draw_rect(Rect2(x+4,y+sy*26,6,2),Color("54717a"))
+	for x in range(155,1000,90):
+		_poly([Vector2(x,y-5),Vector2(x+8,y),Vector2(x,y+5),Vector2(x+3,y)],Color("39515a"))
+	draw_line(Vector2(420,y+43),Vector2(1000,y+43),Color("43626c"),1,true)
+	for x in [420,1000]: draw_line(Vector2(x,y+39),Vector2(x,y+47),Color("64838a"),1)
+	_hex(Vector2(83,y),20,Color("314d57"),PI/6)
+	_text(Vector2(77,y+6),"A" if lane == 0 else "B",19,c,true)
+	_text(Vector2(128,y-53),"CORREDOR " + ("A" if lane == 0 else "B"),13,MUTED,true)
+	var count := 0
+	for e in game.enemies:
+		if e.lane == lane: count += 1
+	_text(Vector2(265,y-53),"%02d ALVOS" % count,12,Color("668a97"))
+	draw_rect(Rect2(111,y-37,17,74),Color("08161f"))
+	for k in range(4): draw_line(Vector2(114,y-28+k*18),Vector2(124,y-23+k*18),GOLD.darkened(0.5),3)
+
+func _turret(lane: int) -> void:
+	var p := Vector2(750,215+lane*185)
+	var powered: bool = game.selected == lane and game.transfer <= 0
+	var c := CYAN if powered else Color("75949e")
+	if game.transfer > 0: c = GOLD
+	var kick := 0.0
+	var target := Vector2(550,280+lane*185)
+	for b in game.beams:
+		if b.lane == lane:
+			kick = maxf(kick,b.life/0.2)
+			target = Vector2(b.x,280+lane*185)
+	draw_set_transform(p)
+	draw_circle(Vector2(5,10),37,Color(0.01,0.04,0.06,0.7))
+	_hex(Vector2(0,5),37,Color("263e48"),PI/6)
+	_hex(Vector2.ZERO,34,Color("49616a"),PI/6)
+	_hex(Vector2(0,-3),29,Color("294651"),PI/6)
+	draw_arc(Vector2(0,-4),25,0,TAU,32,c,2,true)
+	for i in range(6):
+		var dot := Vector2.from_angle(TAU*i/6+PI/6)*30
+		draw_circle(dot,2,Color("9bb5b9"))
+	if powered: _glow(Vector2(0,-4),21,CYAN)
+	var angle: float = turret_angles[lane]
+	draw_set_transform(p,angle)
+	if lane == 0:
+		_poly([Vector2(-14,-16),Vector2(10,-16),Vector2(18,-8),Vector2(18,8),Vector2(10,16),Vector2(-14,16)],Color("a9c4c8"))
+		draw_rect(Rect2(-9,-10,22,20),Color("324e59"))
+		for y in [-7,7]:
+			draw_rect(Rect2(5-kick*4,y-3,34,6),Color("98b2b7"))
+			draw_rect(Rect2(27-kick*4,y-2,13,4),c)
+	else:
+		_hex(Vector2.ZERO,21,Color("9ab6bf"))
+		_hex(Vector2.ZERO,15,Color("2a4653"))
+		draw_rect(Rect2(6-kick*4,-8,30,16),Color("425f6b"))
+		for x in [12,20,28]: draw_line(Vector2(x,-9),Vector2(x,9),c,3)
+		draw_rect(Rect2(35-kick*4,-7,7,14),Color("bce6df"))
+	if kick > 0.5:
+		_poly([Vector2(41,-10),Vector2(59,0),Vector2(41,10),Vector2(47,0)],Color(c,kick))
+	draw_set_transform(Vector2.ZERO)
+	_text(p+Vector2(50,-8),"EMISSOR " + ("A" if lane == 0 else "B"),12,MUTED,true)
+	_text(p+Vector2(50,12),"TRANSFERINDO" if game.transfer > 0 else ("POTÊNCIA +" if powered else "DANO BASE"),13,c,true)
+
+func _reactor() -> void:
+	var p := Vector2(1082,360)
+	_glow(p,56,CYAN if game.health > 3 else Color("f48270"))
+	_hex(p+Vector2(4,13),69,Color("07151d"),PI/6)
+	_hex(p+Vector2(0,5),65,Color("3e555f"),PI/6)
+	_hex(p,61,Color("213d49"),PI/6)
+	draw_arc(p,50,0,TAU,48,Color("637d85"),3,true)
+	for i in range(10):
+		var a := -PI/2+TAU*i/10
+		draw_arc(p,50,a+0.05,a+0.45,6,CYAN if i<game.health else Color("263b45"),5,true)
+	_hex(p,33,Color("5ad0c5"),clock*0.08)
+	_hex(p,28,Color("143742"),clock*0.08)
+	draw_circle(p,16+sin(clock*2)*1.8,Color("b7fcdf"))
+	_text(p+Vector2(-24,89),"NÚCLEO",13,WHITE,true)
+	if hit_flash > 0: draw_arc(p,71,0,TAU,40,Color(Color("ff7d69"),hit_flash),4,true)
+
+func _enemy(e: Dictionary) -> void:
+	var p := Vector2(e.x,280+e.lane*185)
+	var phase := clock*8+float(e.get("id",0))
+	draw_set_transform(p)
+	if e.heavy:
+		_ellipse_shadow(Vector2(1,8),Vector2(23,13))
+		for s in [-1,1]:
+			for x in [-11,11]:
+				var leg := sin(phase+x)*3
+				draw_line(Vector2(x,s*9),Vector2(x-6+leg,s*22),Color("5b6971"),4,true)
+				draw_line(Vector2(x-6+leg,s*22),Vector2(x+5+leg,s*22),Color("c69e69"),3,true)
+		_poly([Vector2(-20,-12),Vector2(8,-18),Vector2(23,-8),Vector2(23,8),Vector2(8,18),Vector2(-20,12)],Color("6a4d3a"))
+		_poly([Vector2(-18,-15),Vector2(8,-21),Vector2(23,-11),Vector2(23,5),Vector2(8,13),Vector2(-18,8)],Color("d6a36a"))
+		_poly([Vector2(-12,-12),Vector2(5,-16),Vector2(16,-8),Vector2(16,4),Vector2(4,8),Vector2(-12,5)],Color("8d6249"))
+		for x in [-6,2,10]: draw_line(Vector2(x,-10),Vector2(x,5),Color("edc58a"),2)
+		draw_circle(Vector2(22,-3),3,Color("ff6d5b"))
+	else:
+		_ellipse_shadow(Vector2(0,7),Vector2(21,9))
+		_poly([Vector2(-18,-5),Vector2(-31,-2-sin(phase)*3),Vector2(-18,3)],Color("e77d68"))
+		_poly([Vector2(-13,-7),Vector2(-22,-20),Vector2(5,-11),Vector2(23,-1),Vector2(5,9),Vector2(-22,18),Vector2(-13,4)],Color("7e3944"))
+		_poly([Vector2(-15,-7),Vector2(4,-11),Vector2(26,-3),Vector2(3,6),Vector2(-15,3)],Color("ee877e"))
+		_poly([Vector2(-2,-7),Vector2(15,-3),Vector2(-3,0)],Color("f4c9a5"))
+		draw_line(Vector2(-17,-14),Vector2(-8,-8),Color("e8a092"),2)
+	if float(e.get("flash",0)) > 0: draw_circle(Vector2(9,-3),12,Color(1,0.96,0.8,float(e.flash)*3))
+	if e.hp < e.max_hp:
+		draw_rect(Rect2(-20,-33,40,3),Color("0b161e"))
+		draw_rect(Rect2(-20,-33,40*maxf(0,e.hp)/e.max_hp,3),GOLD if e.heavy else Color("ff9b8e"))
+	draw_set_transform(Vector2.ZERO)
+
+func _ellipse_shadow(p: Vector2,s: Vector2) -> void:
+	var pts := PackedVector2Array()
+	for i in range(20): pts.append(p+Vector2(cos(TAU*i/20)*s.x,sin(TAU*i/20)*s.y))
+	draw_colored_polygon(pts,Color(0,0.025,0.04,0.65))
+
+func _projectile(b: Dictionary) -> void:
+	var start := Vector2(750,215+b.lane*185)
+	var end := Vector2(b.x,280+b.lane*185)
+	var t := clampf(1.0-b.life/0.2,0,1)
+	var c := CYAN if b.get("boost",false) else Color("a2b9c7")
+	var p := start.lerp(end,minf(1.0,t*2.5))
+	var tail := start.lerp(end,maxf(0.0,minf(1,t*2.5)-0.25))
+	draw_line(tail,p,Color(c,0.25),9,true)
+	draw_line(tail,p,c,3,true)
+	draw_circle(p,2.5,WHITE)
+
+func _effect(fx: Dictionary) -> void:
+	var p := Vector2(fx.x,280+fx.lane*185)
+	var t: float = 1.0-fx.life/fx.max
+	var c := GOLD if fx.kind == "kill" else (Color("ff806a") if fx.kind == "leak" else CYAN)
+	draw_arc(p,4+t*(26 if fx.kind != "hit" else 12),0,TAU,16,Color(c,1.0-t),2,true)
+	for i in range(5):
+		var v := Vector2.from_angle(i*TAU/5+float(fx.x)*0.1)
+		draw_line(p+v*(5+t*15),p+v*(8+t*28),Color(c,1-t),2,true)
+
+func _hud() -> void:
+	draw_rect(Rect2(0,0,1200,95),Color("0b1c25"))
+	draw_line(Vector2(24,95),Vector2(1176,95),Color("36535c"),1)
+	_text(Vector2(30,27),"ESTAÇÃO DE SINAL   /   DEFESA LOCAL",11,MUTED,true)
+	_text(Vector2(30,62),"POTÊNCIA COMPARTILHADA",27,WHITE,true)
+	_text(Vector2(31,83),"Uma rede. Duas frentes.",13,Color("85a9af"))
+	_text(Vector2(535,26),"INTEGRIDADE",11,MUTED,true)
+	for i in range(10): draw_rect(Rect2(535+i*12,38,8,18),CYAN if i<game.health else Color("29404a"))
+	_text(Vector2(671,54),"%02d" % game.health,23,WHITE,true)
+	_text(Vector2(747,26),"RESERVA",11,MUTED,true)
+	_hex(Vector2(756,47),8,GOLD,PI/6)
+	_text(Vector2(775,56),"%02d" % game.credits,25,GOLD,true)
+	for i in range(3):
+		var c := CYAN if i<game.wave else (GOLD if i==game.wave else Color("37525d"))
+		draw_circle(Vector2(893+i*42,46),11,c)
+		_text(Vector2(889+i*42,51),str(i+1),13,INK,true)
+	_text(Vector2(30,127),game.forecast() if game.mode not in ["won","lost"] else "OPERAÇÃO ENCERRADA",17,WHITE,true)
+	var phase := "PREPARAÇÃO" if game.mode == "ready" else ("%02d RESTANTES" % (game.total_enemies()-game.spawned+game.enemies.size()) if game.mode == "wave" else "CHECKPOINT")
+	_text(Vector2(912,127),phase,13,CYAN,true)
+	if game.mode == "wave":
+		draw_rect(Rect2(30,142,1137,3),Color("1c3440"))
+		draw_rect(Rect2(30,142,1137*float(game.spawned-game.enemies.size())/game.total_enemies(),3),CYAN.darkened(0.3))
+	_panel(Rect2(24,590,310,143),Color("0f252f"),Color("34505b"))
+	_panel(Rect2(338,590,526,143),Color("0f252f"),Color("34505b"))
+	_panel(Rect2(874,590,302,143),Color("102b33"),Color("42616b"))
+	_text(Vector2(44,613),"DISTRIBUIÇÃO DE POTÊNCIA",12,MUTED,true)
+	var power_text := "REFORÇO → ROTA " + ("A" if game.selected == 0 else "B")
+	if game.transfer > 0: power_text = "TRANSFERÊNCIA  /  %.1fs" % game.transfer
+	_text(Vector2(44,639),power_text,19,GOLD if game.transfer > 0 else CYAN,true)
+	if game.transfer > 0:
+		var duration := (0.18 if game.upgrade_level == 2 else 0.45) if game.upgrade == 1 else 0.9
+		draw_rect(Rect2(44,648,274,3),Color("2c4047"))
+		draw_rect(Rect2(44,648,274*(1.0-game.transfer/duration),3),GOLD)
+	_text(Vector2(44,720),"1 / 2 ou clique no emissor para transferir",12,MUTED)
+	_text(Vector2(350,613),"MELHORIAS  /  ESCOLHA UMA LINHA",12,MUTED,true)
+	_text(Vector2(350,720),"Duas etapas por linha · 3 créditos por etapa · escolha permanente neste ciclo",12,MUTED)
+	_text(Vector2(886,720),"Checkpoint entre ondas · Esc cancela reset",12,MUTED)
+	if game.mode == "ready" and banner_timer > 0:
+		_panel(Rect2(423,327,356,61),Color("173b42"),CYAN)
+		_text(Vector2(447,351),"CORREDORES PROTEGIDOS",17,CYAN,true)
+		_text(Vector2(447,374),"+3 créditos  /  prepare a próxima onda",14,WHITE)
+
+func _overlay() -> void:
+	draw_rect(Rect2(108,177,930,354),Color(0.015,0.035,0.05,0.84))
+	var title := "REDE EM PAUSA"
+	var lines := ["Espaço ou botão Retomar para continuar.","As rotas não avançam enquanto a operação está pausada."]
+	var c := WHITE
+	if game.mode == "won":
+		title = "SINAL PRESERVADO"
+		lines = ["As três ondas foram contidas. Integridade: %d/10." % game.health,"Novo ciclo permite experimentar a outra linha de melhoria."]
+		c = CYAN
+	elif game.mode == "lost":
+		title = "CONEXÃO PERDIDA"
+		lines = ["A rota sem cobertura alcançou o núcleo.","Retome o checkpoint para tentar a onda sem perder sua melhoria."]
+		c = Color("f29883")
+	if show_help:
+		title = "LEIA. DISTRIBUA. TRANSFIRA."
+		lines = ["1 / 2 ou os botões mudam o reforço entre A e B.","A transferência reduz o dano por 0,9s. Antecipe a chegada dos alvos.","Leves: rápidos e frágeis. Blindados: lentos e resistentes; vazam por 2 de dano.","Ao concluir uma onda: +3 créditos. Escolha e aperfeiçoe uma linha.","Espaço pausa. Sair no combate retorna ao último checkpoint."]
+	_text(Vector2(173,266),title,31,c,true)
+	for i in range(lines.size()): _text(Vector2(175,304+i*31),lines[i],18,WHITE)
+	if game.mode == "won": _text(Vector2(175,420),"%d ALVOS NEUTRALIZADOS    /    %d TRANSFERÊNCIAS" % [game.kills,game.transfers],15,MUTED,true)

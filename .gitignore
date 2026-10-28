@@ -1,0 +1,6 @@
+﻿# Versionado pelo EMANNU OS: cache do Godot e capturas de QA ficam fora
+.godot/
+evidence/
+*.avi
+*.mp4
+*.tmp
